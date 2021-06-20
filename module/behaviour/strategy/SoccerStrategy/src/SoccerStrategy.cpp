@@ -169,7 +169,7 @@ namespace module::behaviour::strategy {
 
         // Main Loop
         // TODO: ensure a reasonable state is emitted even if gamecontroller is not running
-        on<Every<30, Per<std::chrono::seconds>>,
+        on<Every<20, Per<std::chrono::seconds>>,
            With<Sensors>,
            With<GameState>,
            With<Phase>,
