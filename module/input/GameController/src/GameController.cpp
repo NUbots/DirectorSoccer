@@ -208,7 +208,7 @@ namespace module::input {
     void GameController::process(const GameState& oldGameState,
                                  const GameControllerPacket& oldPacket,
                                  const GameControllerPacket& newPacket) {
-
+        // log(newPacket);
         auto state = std::make_unique<GameState>(oldGameState);
 
         std::vector<std::function<void()>> stateChanges;
@@ -445,23 +445,26 @@ namespace module::input {
          * Process state/mode changes
          ******************************************************************************************/
         if (newPacket.mode != mode && oldPacket.mode != gamecontroller::Mode::TIMEOUT
-            && newPacket.mode != gamecontroller::Mode::TIMEOUT) {
-
+            && newPacket.mode != gamecontroller::Mode::TIMEOUT && newPacket.mode != gamecontroller::Mode::TIMEOUT) {
             mode = newPacket.mode;
+            // log("class mode ", mode);
 
             // Changed modes but not to timeout
             switch (newPacket.mode) {
                 case gamecontroller::Mode::NORMAL:
+                    // log("in case: normal");
                     state->data.mode = GameState::Data::Mode::NORMAL;
                     stateChanges.push_back(
                         [this] { emit(std::make_unique<GameMode>(GameState::Data::Mode::Value::NORMAL)); });
                     break;
                 case gamecontroller::Mode::PENALTY_SHOOTOUT:
+                    // log("in case: penalty");
                     state->data.mode = GameState::Data::Mode::PENALTY_SHOOTOUT;
                     stateChanges.push_back(
                         [this] { emit(std::make_unique<GameMode>(GameState::Data::Mode::Value::PENALTY_SHOOTOUT)); });
                     break;
                 case gamecontroller::Mode::OVERTIME:
+                    // log("in case: overtime");
                     state->data.mode = GameState::Data::Mode::OVERTIME;
                     stateChanges.push_back(
                         [this] { emit(std::make_unique<GameMode>(GameState::Data::Mode::Value::OVERTIME)); });
@@ -471,7 +474,7 @@ namespace module::input {
                     emit(std::make_unique<GameState::Data::Mode>(state->data.mode));
             }
         }
-
+        // log("mode after if ", state->data.mode);
         if (oldPacket.mode != gamecontroller::Mode::TIMEOUT && newPacket.mode == gamecontroller::Mode::TIMEOUT) {
 
             // Change the game state to timeout

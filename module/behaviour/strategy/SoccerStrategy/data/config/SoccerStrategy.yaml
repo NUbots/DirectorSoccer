@@ -19,6 +19,6 @@ localisation_interval: 30
 localisation_duration: 5
 
 force_playing: false
-force_penalty_shootout: false
+force_penalty_shootout: true
 
 always_power_kick: true

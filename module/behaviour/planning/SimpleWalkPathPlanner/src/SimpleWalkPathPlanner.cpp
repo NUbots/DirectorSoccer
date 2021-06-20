@@ -23,6 +23,7 @@
 #include <cmath>
 
 #include "extension/Configuration.hpp"
+#include "extension/Script.hpp"
 
 #include "message/behaviour/KickPlan.hpp"
 #include "message/behaviour/MotionCommand.hpp"
@@ -46,6 +47,7 @@
 namespace module::behaviour::planning {
 
     using extension::Configuration;
+    using extension::ExecuteScriptByName;
 
     using message::behaviour::KickPlan;
     using message::behaviour::MotionCommand;
@@ -160,19 +162,29 @@ namespace module::behaviour::planning {
                          const KickPlan& kickPlan,
                          const FieldDescription& fieldDescription) {
                 if (wantsTo.kick) {
+                    // log("WANTS TO KICK");
                     emit(std::make_unique<StopCommand>(subsumptionId));
                     return;
                 }
 
                 if (latestCommand.type == message::behaviour::MotionCommand::Type::STAND_STILL) {
 
-
+                    // log("STAND STILL");
                     emit(std::make_unique<StopCommand>(subsumptionId));
                     // emit(std::make_unique<ActionPriorities>(ActionPriorities { subsumptionId, { 40, 11 }}));
 
                     return;
                 }
+
+                else if (latestCommand.type == message::behaviour::MotionCommand::Type::PENALTY_KICK) {
+                    // log("KICK PENALTY");
+                    emit(std::make_unique<ExecuteScriptByName>(subsumptionId, "KickPenalty.yaml"));
+                    emit(std::make_unique<ActionPriorities>(ActionPriorities{subsumptionId, {1000, 1000}}));
+                    return;
+                }
+
                 else if (latestCommand.type == message::behaviour::MotionCommand::Type::DIRECT_COMMAND) {
+                    // log("DIRECT COMMAND");
                     // TO DO, change to Bezier stuff
                     std::unique_ptr<WalkCommand> command =
                         std::make_unique<WalkCommand>(subsumptionId, latestCommand.walk_command);
@@ -180,7 +192,7 @@ namespace module::behaviour::planning {
                     emit(std::make_unique<ActionPriorities>(ActionPriorities{subsumptionId, {40, 11}}));
                     return;
                 }
-
+                // log("WALKING");
                 Eigen::Affine3d Htw(sensors.Htw);
 
                 auto now = NUClear::clock::now();
@@ -252,7 +264,7 @@ namespace module::behaviour::planning {
                 // log("distanceToBall", distanceToBall);
                 // log("forwardSpeed2", finalForwardSpeed);
 
-
+                log("walk command?");
                 std::unique_ptr<WalkCommand> command =
                     std::make_unique<WalkCommand>(subsumptionId,
                                                   Eigen::Vector3d(finalForwardSpeed, finalSideSpeed, angle));

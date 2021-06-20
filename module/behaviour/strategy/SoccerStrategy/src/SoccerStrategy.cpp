@@ -189,6 +189,11 @@ namespace module::behaviour::strategy {
 
                     auto mode = cfg_.forcePenaltyShootout ? GameMode::PENALTY_SHOOTOUT : gameState.data.mode.value;
 
+                    // if (mode == GameMode::PENALTY_SHOOTOUT) {
+                    //     emit(std::make_unique<MotionCommand>(utility::behaviour::PenaltyKick()));
+                    //     return;
+                    // }
+                    // log("mode: ", mode);
                     // auto& phase = gameState.phase;
 
                     // TODO: fix ik kick
@@ -214,36 +219,56 @@ namespace module::behaviour::strategy {
                                 currentState = Behaviour::State::INITIAL;
                             }
                             else if (phase == Phase::READY) {
+                                // log("ready");
                                 if (gameState.data.our_kick_off) {
+                                    // log("ready kick 1");
                                     walkTo(fieldDescription, cfg_.start_position_offensive);
                                 }
                                 else {
+                                    // log("ready kick 2");
                                     walkTo(fieldDescription, cfg_.start_position_defensive);
                                 }
                                 find({FieldTarget(FieldTarget::Target::SELF)});
                                 currentState = Behaviour::State::READY;
                             }
                             else if (phase == Phase::SET) {
+                                // log("set");
                                 standStill();
                                 find({FieldTarget(FieldTarget::Target::BALL)});
                                 if (mode == GameMode::PENALTY_SHOOTOUT) {
+                                    // log("set penalty shoot-out");
                                     penaltyShootoutLocalisationReset(fieldDescription);
                                     emit(std::make_unique<ResetRawSensors>());
                                 }
                                 currentState = Behaviour::State::SET;
                             }
                             else if (phase == Phase::TIMEOUT) {
+                                // log("timeout");
                                 standStill();
                                 find({FieldTarget(FieldTarget::Target::SELF)});
                                 currentState = Behaviour::State::TIMEOUT;
                             }
                             else if (phase == Phase::FINISHED) {
+                                // log("finished");
                                 standStill();
                                 find({FieldTarget(FieldTarget::Target::SELF)});
                                 currentState = Behaviour::State::FINISHED;
                             }
                             else if (phase == Phase::PLAYING) {
-                                play(field, ball, fieldDescription, mode);
+                                // log("playing");
+                                if (mode == GameMode::PENALTY_SHOOTOUT) {
+                                    currentState = Behaviour::State::SHOOTOUT;
+                                    if (currentState != previousState) {
+                                        // log("penalty shoot-out");
+                                        emit(std::make_unique<MotionCommand>(utility::behaviour::PenaltyKick()));
+                                    }
+                                    else {
+                                        standStill();
+                                    }
+                                }
+                                else {
+                                    play(field, ball, fieldDescription, mode);
+                                }
                             }
                         }
                     }
@@ -292,6 +317,7 @@ namespace module::behaviour::strategy {
             if (NUClear::clock::now() - ballLastMeasured
                 < cfg_.ball_last_seen_max_time) {  // ball has been seen recently
                 find({FieldTarget(FieldTarget::Target::BALL)});
+                // log("play kick 1");
                 walkTo(fieldDescription, FieldTarget::Target::BALL);
                 currentState = Behaviour::State::WALK_TO_BALL;
             }
@@ -301,11 +327,13 @@ namespace module::behaviour::strategy {
                     && (position.translation().norm() > 1)) {  // a long way away from centre
                     // walk to centre of field
                     find({FieldTarget(FieldTarget::Target::BALL)});
+                    // log("play kick 2");
                     walkTo(fieldDescription, Eigen::Vector2d::Zero());
                     currentState = Behaviour::State::MOVE_TO_CENTRE;
                 }
                 else {
                     find({FieldTarget(FieldTarget::Target::BALL)});
+                    // log("play kick 3");
                     walkTo(fieldDescription, FieldTarget::Target::BALL);
                     // spinWalk();
 

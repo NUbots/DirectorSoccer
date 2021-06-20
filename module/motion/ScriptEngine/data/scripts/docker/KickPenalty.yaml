@@ -80,7 +80,7 @@
       position: -2.44346094
       gain: 50
       torque: 100
-- duration: 90
+- duration: 50
   targets:
     - id: L_HIP_YAW
       position: 6.79000015e-18
@@ -162,7 +162,7 @@
       position: -2.44346094
       gain: 50
       torque: 100
-- duration: 30
+- duration: 50
   targets:
     - id: L_HIP_YAW
       position: 3.40999996e-18
@@ -244,7 +244,7 @@
       position: -2.44346094
       gain: 50
       torque: 100
-- duration: 30
+- duration: 50
   targets:
     - id: L_HIP_YAW
       position: -2.26999999e-17
@@ -326,7 +326,7 @@
       position: -2.44346094
       gain: 50
       torque: 100
-- duration: 30
+- duration: 50
   targets:
     - id: L_HIP_YAW
       position: -1.13999997e-17
@@ -408,7 +408,7 @@
       position: -2.44346094
       gain: 50
       torque: 100
-- duration: 30
+- duration: 50
   targets:
     - id: L_HIP_YAW
       position: -5.58999976e-16
@@ -490,7 +490,7 @@
       position: -2.44346094
       gain: 50
       torque: 100
-- duration: 30
+- duration: 50
   targets:
     - id: L_HIP_YAW
       position: 2.56999988e-13
@@ -572,7 +572,7 @@
       position: -2.44346094
       gain: 50
       torque: 100
-- duration: 30
+- duration: 40
   targets:
     - id: L_HIP_YAW
       position: -7.21000035e-15
@@ -654,7 +654,7 @@
       position: -2.44346094
       gain: 50
       torque: 100
-- duration: 30
+- duration: 40
   targets:
     - id: L_HIP_YAW
       position: -3.54000005e-13
