@@ -62,6 +62,10 @@ namespace module::input {
         , packet()
         , mode() {
 
+        on<Startup>().then([this] {
+            packet.kickOffTeam = -1;
+        });
+
         // Configure
         on<Configuration, Trigger<GlobalConfig>>("GameController.yaml")
             .then("GameController Configuration",
@@ -160,7 +164,7 @@ namespace module::input {
         packet.playersPerTeam = PLAYERS_PER_TEAM;
         packet.state          = static_cast<gamecontroller::State>(-1);
         packet.firstHalf      = true;
-        packet.kickOffTeam    = static_cast<gamecontroller::TeamColour>(-1);
+        packet.kickOffTeam    = -1;
         packet.mode           = static_cast<gamecontroller::Mode>(-1);
         packet.dropInTeam     = static_cast<gamecontroller::TeamColour>(-1);
         packet.dropInTime     = -1;
@@ -216,7 +220,7 @@ namespace module::input {
         // game score
         auto& oldOwnTeam = getOwnTeam(oldPacket);
         auto& newOwnTeam = getOwnTeam(newPacket);
-
+        // log(newPacket);
         auto& oldOpponentTeam = getOpponentTeam(oldPacket);
         auto& newOpponentTeam = getOpponentTeam(newPacket);
 
@@ -259,10 +263,9 @@ namespace module::input {
 
         // Note: assumes playersPerTeam never changes
         for (uint i = 0; i < newPacket.playersPerTeam; i++) {
-            uint playerId      = i + 1;
-            auto& oldOwnPlayer = oldOwnTeam.players[i];
-            auto& newOwnPlayer = newOwnTeam.players[i];
-
+            uint playerId           = i + 1;
+            auto& oldOwnPlayer      = oldOwnTeam.players[i];
+            auto& newOwnPlayer      = newOwnTeam.players[i];
             auto& oldOpponentPlayer = oldOpponentTeam.players[i];
             auto& newOpponentPlayer = newOpponentTeam.players[i];
 
@@ -275,7 +278,11 @@ namespace module::input {
             if (playerId == PLAYER_ID) {
                 state->data.self = ownPlayer;
             }
+            // if (playerId == 1) {
+            //     log("\npacket\n", newOwnPlayer);
+            // }
 
+            // log("goalkeeper? ", ownPlayer.goalKeeper);
             state->data.opponent.players.push_back(
                 {playerId,
                  getPenaltyReason(newOpponentPlayer.penaltyState),
@@ -418,13 +425,14 @@ namespace module::input {
         /*******************************************************************************************
          * Process kick off team
          ******************************************************************************************/
+        // log("old packet kick off team: ", oldPacket.kickOffTeam);
         if (oldPacket.kickOffTeam != newPacket.kickOffTeam) {
 
             // Update the kickoff team (us or them)
-            state->data.our_kick_off = newPacket.kickOffTeam == newOwnTeam.teamColour;
+            state->data.our_kick_off = newPacket.kickOffTeam == newOwnTeam.teamId;
 
             // new kick off team? :/
-            GameEvents::Context team = newPacket.kickOffTeam == newOwnTeam.teamColour
+            GameEvents::Context team = newPacket.kickOffTeam == newOwnTeam.teamId
                                            ? GameEvents::Context::Value::TEAM
                                            : GameEvents::Context::Value::OPPONENT;
             stateChanges.push_back([this, team] { emit(std::make_unique<KickOffTeam>(KickOffTeam{team})); });

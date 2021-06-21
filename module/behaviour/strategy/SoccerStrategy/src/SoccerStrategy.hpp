@@ -87,10 +87,11 @@ namespace module::behaviour::strategy {
         std::vector<message::behaviour::FieldTarget> lookTarget;
 
         // TODO: remove horrible
-        bool isGettingUp            = false;
-        bool selfPenalised          = false;
-        bool manualOrientationReset = false;
-        double manualOrientation    = 0.0;
+        bool isGettingUp                                     = false;
+        bool selfPenalised                                   = false;
+        bool manualOrientationReset                          = false;
+        double manualOrientation                             = 0.0;
+        message::input::GameEvents::Context team_kicking_off = message::input::GameEvents::Context::UNKNOWN;
         message::behaviour::KickPlan::KickType kickType;
         message::behaviour::Behaviour::State currentState = message::behaviour::Behaviour::State::INIT;
 
@@ -105,6 +106,7 @@ namespace module::behaviour::strategy {
         void unpenalisedLocalisationReset(const message::support::FieldDescription& fieldDescription);
 
         void standStill();
+        void standScript();
         void searchWalk();
         void walkTo(const message::support::FieldDescription& fieldDescription,
                     const message::behaviour::FieldTarget::Target& object);
