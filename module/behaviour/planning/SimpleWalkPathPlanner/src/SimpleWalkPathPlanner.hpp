@@ -29,6 +29,8 @@
 #include "message/behaviour/KickPlan.hpp"
 #include "message/behaviour/MotionCommand.hpp"
 
+#include "utility/motion/splines/SmoothSpline.hpp"
+
 namespace module::behaviour::planning {
 
     // using namespace message;
@@ -57,13 +59,22 @@ namespace module::behaviour::planning {
         message::behaviour::KickPlan targetHeading;
         Eigen::Vector2d targetPosition = Eigen::Vector2d::Zero();
 
+        bool lost_ball = true;
         NUClear::clock::time_point timeBallLastSeen;
         Eigen::Vector3d rBWw     = Eigen::Vector3d(10.0, 0.0, 0.0);
         bool robot_ground_space  = true;
-        Eigen::Vector2d position = Eigen::Vector2d::UnitX();  // ball pos rel to robot
+        Eigen::Vector2d rBTt = Eigen::Vector2d::UnitX();  // ball pos rel to robot
         float ball_approach_dist = 0.2;
         float slowdown_distance  = 0.2;
         bool useLocalisation     = true;
+
+        utility::motion::splines::SmoothSpline<double> trajectoryX;
+        utility::motion::splines::SmoothSpline<double> trajectoryY;
+
+        NUClear::clock::time_point start_time = NUClear::clock::now();
+
+        void generateWalkPath(Eigen::Vector2d rBTt, Eigen::Vector2d rGTt);
+        Eigen::Vector2d samplePath(double time);
 
     public:
         explicit SimpleWalkPathPlanner(std::unique_ptr<NUClear::Environment> environment);

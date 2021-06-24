@@ -40,6 +40,7 @@
 #include "utility/input/LimbID.hpp"
 #include "utility/input/ServoID.hpp"
 #include "utility/localisation/transform.hpp"
+#include "utility/motion/splines/SmoothSpline.hpp"
 #include "utility/nusight/NUhelpers.hpp"
 
 
@@ -60,6 +61,7 @@ namespace module::behaviour::planning {
     using message::motion::WalkCommand;
     using message::motion::WalkStopped;
     using message::support::FieldDescription;
+
     using VisionBalls = message::vision::Balls;
 
     using utility::behaviour::ActionPriorities;
@@ -67,7 +69,9 @@ namespace module::behaviour::planning {
     using utility::input::LimbID;
     using utility::input::ServoID;
     using utility::localisation::fieldStateToTransform3D;
+    using utility::motion::splines::SmoothSpline;
     using utility::nusight::graph;
+
 
     SimpleWalkPathPlanner::SimpleWalkPathPlanner(std::unique_ptr<NUClear::Environment> environment)
         : Reactor(std::move(environment))
@@ -158,7 +162,6 @@ namespace module::behaviour::planning {
                     return;
                 }
                 else if (latestCommand.type == message::behaviour::MotionCommand::Type::DIRECT_COMMAND) {
-                    // TO DO, change to Bezier stuff
                     std::unique_ptr<WalkCommand> command =
                         std::make_unique<WalkCommand>(subsumptionId, latestCommand.walk_command);
                     emit(std::move(command));
@@ -166,71 +169,66 @@ namespace module::behaviour::planning {
                     return;
                 }
 
+                // ************** NEW PATH GENERATION BASED ON SPLINES ****************
                 Eigen::Affine3d Htw(sensors.Htw);
 
                 auto now = NUClear::clock::now();
-                float timeSinceBallSeen =
+                float timeSinceBallLastSeen =
                     std::chrono::duration_cast<std::chrono::nanoseconds>(now - timeBallLastSeen).count()
                     * (1.0f / std::nano::den);
 
 
-                Eigen::Vector3d rBWw_temp(ball.position.x(), ball.position.y(), fieldDescription.ball_radius);
-                rBWw     = timeSinceBallSeen < search_timeout ? rBWw_temp :                         // Place last seen
-                           Htw.inverse().linear().leftCols<1>() + Htw.inverse().translation();  // In front of the robot
-                position = (Htw * rBWw).head<2>();
+                Eigen::Vector3d walk_command = Eigen::Vector3d::Zero();
+                log("Lost ball? ", lost_ball);
+                // If we've seen the ball recently, lets walk to it
+                if (timeSinceBallLastSeen < search_timeout) {
+                    // If we have seen the ball again after losing it, calculate the trajectories again
+                    if (lost_ball) {
+                        lost_ball  = false;
+                        start_time = NUClear::clock::now();
+                        Eigen::Vector3d rBWw(ball.position.x(), ball.position.y(), fieldDescription.ball_radius);
+                        rBTt = (Htw * rBWw).head<2>();
 
-                // Hack Planner:
-                float headingChange = 0;
-                float sideStep      = 0;
-                float speedFactor   = 1;
-                if (useLocalisation) {
-
-                    // Transform kick target to torso space
-                    Eigen::Affine2d fieldPosition = Eigen::Affine2d(field.position);
-                    Eigen::Affine3d Hfw;
-                    Hfw.translation() =
-                        Eigen::Vector3d(fieldPosition.translation().x(), fieldPosition.translation().y(), 0);
-                    Hfw.linear() = Eigen::AngleAxisd(Eigen::Rotation2Dd(fieldPosition.rotation()).angle(),
-                                                     Eigen::Vector3d::UnitZ())
-                                       .toRotationMatrix();
-
-                    Eigen::Affine3d Htf        = Htw * Hfw.inverse();
-                    Eigen::Vector3d kickTarget = Htf * Eigen::Vector3d(kickPlan.target.x(), kickPlan.target.y(), 0);
-
-                    // //approach point:
-                    Eigen::Vector2d ballToTarget = (kickTarget.head<2>() - position).normalized();
-                    Eigen::Vector2d kick_point   = position - ballToTarget * ball_approach_dist;
-
-                    if (position.norm() > slowdown_distance) {
-                        position = kick_point;
+                        generateWalkPath(rBTt, rBTt);
                     }
-                    else {
-                        speedFactor   = slow_approach_factor;
-                        headingChange = std::atan2(ballToTarget.y(), ballToTarget.x());
-                        sideStep      = 1;
+
+                    // if (!lostBall) {
+                    log("We saw the ball ", timeSinceBallLastSeen, " seconds ago");
+                    log("Ball vector is ", rBTt.transpose());
+                    // }
+                    double time =
+                        std::chrono::duration_cast<std::chrono::nanoseconds>(NUClear::clock::now() - start_time).count()
+                        * (1.0f / std::nano::den);
+
+                    // We're resetting the time rn
+                    if (time > (Eigen::Vector2d(2.0, 2.0).norm() / forwardSpeed)) {
+                        start_time = NUClear::clock::now();
+                        time = std::chrono::duration_cast<std::chrono::nanoseconds>(NUClear::clock::now() - start_time)
+                                   .count()
+                               * (1.0f / std::nano::den);
                     }
+
+                    // log("Time elapsed: ", time);
+                    log("Position moving to: ",
+                        Eigen::Vector2d(trajectoryX.pos(time), trajectoryY.pos(time)).transpose());
+                    // log("Velocity moving to: ",
+                    //     Eigen::Vector2d(trajectoryX.vel(time), trajectoryY.vel(time)).transpose());
+                    log("End position moving to: ",
+                        Eigen::Vector2d(trajectoryX.pos((Eigen::Vector2d(2.0, 2.0).norm() / forwardSpeed)),
+                                        trajectoryY.pos((Eigen::Vector2d(2.0, 2.0).norm() / forwardSpeed)))
+                            .transpose());
+
+                    Eigen::Vector2d xyPos(samplePath(time));
+                    walk_command.x() = xyPos.x();
+                    walk_command.y() = xyPos.y();
+                }
+                // Otherwise we've lost the ball
+                else {
+                    lost_ball = true;
                 }
 
+                std::unique_ptr<WalkCommand> command = std::make_unique<WalkCommand>(subsumptionId, walk_command);
 
-                float angle = std::atan2(position.y(), position.x()) + headingChange;
-
-                angle = std::min(turnSpeed, std::max(angle, -turnSpeed));
-
-
-                // Euclidean distance to ball
-                float scaleF            = 2.0 / (1.0 + std::exp(-a * std::fabs(position.x()) + b)) - 1.0;
-                float scaleF2           = angle / M_PI;
-                float finalForwardSpeed = speedFactor * forwardSpeed * scaleF * (1.0 - scaleF2);
-
-                float scaleS         = 2.0 / (1.0 + std::exp(-a * std::fabs(position.y()) + b)) - 1.0;
-                float scaleS2        = angle / M_PI;
-                float finalSideSpeed = -speedFactor * ((0.0 < position.y()) - (position.y() < 0.0)) * sideStep
-                                       * sideSpeed * scaleS * (1.0 - scaleS2);
-
-
-                std::unique_ptr<WalkCommand> command =
-                    std::make_unique<WalkCommand>(subsumptionId,
-                                                  Eigen::Vector3d(finalForwardSpeed, finalSideSpeed, angle));
 
                 emit(std::move(command));
                 emit(std::make_unique<ActionPriorities>(ActionPriorities{subsumptionId, {40, 11}}));
@@ -241,4 +239,34 @@ namespace module::behaviour::planning {
             latestCommand = cmd;
         });
     }
+
+    // Generates a path that is stored in splines
+    void SimpleWalkPathPlanner::generateWalkPath(Eigen::Vector2d rBTt, Eigen::Vector2d rGTt) {
+        trajectoryX.reset();
+        trajectoryY.reset();
+
+        // Calculate walk time
+        double walk_time = rGTt.norm() / forwardSpeed;
+
+        // Calculate the estimated position of the ball along the trajectory and adjust time accordingly
+        double ratio = rBTt.norm() / rGTt.norm();
+
+        // Generate the walk trajectory for X
+        trajectoryX.addPoint(0.0, 0.0, forwardSpeed, 0.0);
+        trajectoryX.addPoint(walk_time * ratio, rBTt.x(), forwardSpeed, 0.0);
+        trajectoryX.addPoint(walk_time, rGTt.x(), forwardSpeed, 0.0);
+
+        // Generate the walk trajectory for Y
+        trajectoryY.addPoint(0.0, 0.0, sideSpeed, 0.0);
+        trajectoryY.addPoint(walk_time * ratio, rBTt.y(), sideSpeed, 0.0);
+        trajectoryY.addPoint(walk_time, rGTt.y(), sideSpeed, 0.0);
+
+        log("Made trajectories, ", trajectoryY.size(), ":", trajectoryX.size());
+    }
+
+    Eigen::Vector2d SimpleWalkPathPlanner::samplePath(double time) {
+        log("Trajectories are of size, ", trajectoryY.size(), ":", trajectoryX.size());
+        return Eigen::Vector2d(trajectoryX.vel(time), trajectoryY.vel(time));
+    }
+
 }  // namespace module::behaviour::planning
