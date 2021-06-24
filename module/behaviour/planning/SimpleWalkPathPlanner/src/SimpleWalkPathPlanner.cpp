@@ -168,6 +168,11 @@ namespace module::behaviour::planning {
                     emit(std::make_unique<ActionPriorities>(ActionPriorities{subsumptionId, {40, 11}}));
                     return;
                 }
+                else if (latestCommand.type == message::behaviour::MotionCommand::Type::WALK_TO_STATE) {
+                    emit(std::make_unique<WalkCommand>(subsumptionId, Eigen::Vector3d(forwardSpeed, 0.0, turnSpeed)));
+                    emit(std::make_unique<ActionPriorities>(ActionPriorities{subsumptionId, {40, 11}}));
+                    return;
+                }
 
                 // ************** NEW PATH GENERATION BASED ON SPLINES ****************
                 Eigen::Affine3d Htw(sensors.Htw);
@@ -219,14 +224,18 @@ namespace module::behaviour::planning {
                             .transpose());
 
                     Eigen::Vector2d xyPos(samplePath(time));
-                    walk_command.x() = xyPos.x();
-                    walk_command.y() = xyPos.y();
+                    walk_command.x()      = xyPos.x();
+                    walk_command.y()      = xyPos.y();
+                    double turn_threshold = 5 * M_PI / 180;  // 5 degrees
+                    if (std::abs(walk_command.y()) > turn_threshold) {
+                        walk_command.z() = walk_command.y() > 0 ? turnSpeed : -turnSpeed;
+                    }
                 }
                 // Otherwise we've lost the ball
                 else {
                     lost_ball = true;
                 }
-
+                log(walk_command);
                 std::unique_ptr<WalkCommand> command = std::make_unique<WalkCommand>(subsumptionId, walk_command);
 
 
