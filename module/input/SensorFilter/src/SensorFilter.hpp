@@ -28,9 +28,11 @@
 #include "VirtualLoadSensor.hpp"
 
 #include "message/motion/KinematicsModel.hpp"
+#include "message/platform/RawSensors.hpp"
 
 #include "utility/math/filter/UKF.hpp"
 
+using message::platform::RawSensors;
 
 namespace module::input {
 
@@ -178,6 +180,8 @@ namespace module::input {
         // Handle for the sensor filter update loop, allows disabling new sensor updates when a reset event occurs
         ReactionHandle update_loop{};
         std::atomic_bool reset_filter{true};
+
+        void buttonCheckEmit(std::list<std::shared_ptr<const RawSensors>> sensors, const double threshold);
     };
 }  // namespace module::input
 #endif  // MODULES_INPUT_SENSORFILTER_HPP

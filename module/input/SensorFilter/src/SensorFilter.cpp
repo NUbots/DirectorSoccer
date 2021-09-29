@@ -93,6 +93,50 @@ namespace module::input {
         return s.str();
     }
 
+    void SensorFilter::buttonCheckEmit(std::list<std::shared_ptr<const RawSensors>> sensors, const double threshold) {
+        int leftCount   = 0;
+        int middleCount = 0;
+
+        // If we have any downs in the last 20 frames then we are button pushed
+        for (const auto& s : sensors) {
+            if (s->buttons.left && !s->platform_error_flags) {
+                ++leftCount;
+            }
+            if (s->buttons.middle && !s->platform_error_flags) {
+                ++middleCount;
+            }
+        }
+
+        bool newLeftDown   = leftCount > threshold;
+        bool newMiddleDown = middleCount > threshold;
+
+        if (newLeftDown != leftDown) {
+            leftDown = newLeftDown;
+
+            if (newLeftDown) {
+                NUClear::log("Left Button Down");
+                emit(std::make_unique<ButtonLeftDown>());
+            }
+            else {
+                NUClear::log("Left Button Up");
+                emit(std::make_unique<ButtonLeftUp>());
+            }
+        }
+        if (newMiddleDown != middleDown) {
+            middleDown = newMiddleDown;
+
+            if (newMiddleDown) {
+                log("Middle Button Down");
+                emit(std::make_unique<ButtonMiddleDown>());
+            }
+            else {
+                log("Middle Button Up");
+                emit(std::make_unique<ButtonMiddleUp>());
+            }
+        }
+    }
+
+
     SensorFilter::SensorFilter(std::unique_ptr<NUClear::Environment> environment)
         : Reactor(std::move(environment)), theta(Eigen::Vector3d::Zero()) {
 
@@ -308,48 +352,7 @@ namespace module::input {
                     }
                 }
 
-                int leftCount   = 0;
-                int middleCount = 0;
-
-                // If we have any downs in the last 20 frames then we are button pushed
-                for (const auto& s : sensors) {
-                    if (s->buttons.left && !s->platform_error_flags) {
-                        ++leftCount;
-                    }
-                    if (s->buttons.middle && !s->platform_error_flags) {
-                        ++middleCount;
-                    }
-                }
-
-                bool newLeftDown   = leftCount > config.buttons.debounceThreshold;
-                bool newMiddleDown = middleCount > config.buttons.debounceThreshold;
-
-                if (newLeftDown != leftDown) {
-
-                    leftDown = newLeftDown;
-
-                    if (newLeftDown) {
-                        log("Left Button Down");
-                        emit(std::make_unique<ButtonLeftDown>());
-                    }
-                    else {
-                        log("Left Button Up");
-                        emit(std::make_unique<ButtonLeftUp>());
-                    }
-                }
-                if (newMiddleDown != middleDown) {
-
-                    middleDown = newMiddleDown;
-
-                    if (newMiddleDown) {
-                        log("Middle Button Down");
-                        emit(std::make_unique<ButtonMiddleDown>());
-                    }
-                    else {
-                        log("Middle Button Up");
-                        emit(std::make_unique<ButtonMiddleUp>());
-                    }
-                }
+                buttonCheckEmit(sensors, config.buttons.debounceThreshold);
             });
 
         update_loop =
