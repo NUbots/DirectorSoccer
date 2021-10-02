@@ -28,11 +28,6 @@ namespace module::vision {
                 //      Three lines makes a T shape
                 // How to deal with center circle? Points that were thrown out, try to make a circle out of them?
 
-
-                // Other idea
-                // Try to make lines, check what points are close on the line, if too few are then try with a different
-                // pair Keep going until ??? not all points will be on lines because of center circle...
-
                 // Convenience variables
                 const auto& cls                                     = horizon.mesh->classifications;
                 const auto& neighbours                              = horizon.mesh->neighbourhood;
