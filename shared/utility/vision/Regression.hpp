@@ -19,7 +19,7 @@ namespace utility::vision {
     // Returns a pair with success boolean and results
     // Results are (m,b,r) which are the slope of the line, the y-intercept of the line, and the correlation coefficient
     template <typename Scalar>
-    std::pair<bool, std::tuple<Scalar, Scalar, Scalar>> linreg(std::vector<Eigen::Vector2f> coords) {
+    std::pair<bool, std::tuple<Scalar, Scalar, Scalar>> linreg(std::vector<Eigen::Matrix<Scalar, 2, 1>> coords) {
         int n    = coords.size();
         Scalar m = 0.0;
         Scalar b = 0.0;
@@ -32,11 +32,11 @@ namespace utility::vision {
         Scalar sumy2 = 0.0; /* sum of y**2  */
 
         for (int i = 0; i < n; i++) {
-            sumx += coords[i].x();
-            sumx2 += sqr(coords[i].x());
-            sumxy += coords[i].x() * coords[i].y();
-            sumy += coords[i].y();
-            sumy2 += sqr(coords[i].y());
+            sumx += coords[i][0];
+            sumx2 += sqr(coords[i][0]);
+            sumxy += coords[i][0] * coords[i][1];
+            sumy += coords[i][1];
+            sumy2 += sqr(coords[i][1]);
         }
 
         Scalar denom = (n * sumx2 - sqr(sumx));

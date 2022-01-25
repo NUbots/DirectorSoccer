@@ -5,16 +5,18 @@
 
 namespace module::vision {
 
-class FieldLineDetector : public NUClear::Reactor {
-private:
-    /// The configuration variables for this reactor
-    struct {
-    } config;
+    class FieldLineDetector : public NUClear::Reactor {
+    private:
+        /// The configuration variables for this reactor
+        struct {
+            float confidence_threshold = 0.0f;
+            int cluster_points         = 0;
+        } config;
 
-public:
-    /// @brief Called by the powerplant to build and setup the FieldLineDetector reactor.
-    explicit FieldLineDetector(std::unique_ptr<NUClear::Environment> environment);
-};
+    public:
+        /// @brief Called by the powerplant to build and setup the FieldLineDetector reactor.
+        explicit FieldLineDetector(std::unique_ptr<NUClear::Environment> environment);
+    };
 
 }  // namespace module::vision
 

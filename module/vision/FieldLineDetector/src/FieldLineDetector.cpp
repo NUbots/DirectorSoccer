@@ -1,19 +1,36 @@
+
 #include "FieldLineDetector.hpp"
+
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+#include <fmt/format.h>
+#include <numeric>
 
 #include "extension/Configuration.hpp"
 
+#include "message/support/FieldDescription.hpp"
+#include "message/vision/GreenHorizon.hpp"
+#include "message/vision/Line.hpp"
+
 #include "utility/vision/Regression.hpp"
+#include "utility/vision/visualmesh/VisualMesh.hpp"
 
 namespace module::vision {
 
     using extension::Configuration;
+    using message::support::FieldDescription;
+    using message::vision::FieldLines;
+    using message::vision::GreenHorizon;
+    using message::vision::Line;
 
     FieldLineDetector::FieldLineDetector(std::unique_ptr<NUClear::Environment> environment)
         : Reactor(std::move(environment)), config{} {
 
         on<Configuration>("FieldLineDetector.yaml").then([this](const Configuration& cfg) {
             // Use configuration here from file FieldLineDetector.yaml
-            this->log_level = cfg["log_level"].as<NUClear::LogLevel>();
+            this->log_level             = cfg["log_level"].as<NUClear::LogLevel>();
+            config.confidence_threshold = cfg["confidence_threshold"].as<float>();
+            config.cluster_points       = cfg["cluster_points"].as<int>();
         });
 
         on<Trigger<GreenHorizon>, With<FieldDescription>>().then(
@@ -51,7 +68,8 @@ namespace module::vision {
                     indices.end(),
                     neighbours,
                     [&](const int& idx) {
-                        return idx == int(indices.size()) || (cls(BALL_INDEX, idx) >= config.confidence_threshold);
+                        return idx == int(indices.size())
+                               || (cls(FIELD_LINE_INDEX, idx) >= config.confidence_threshold);
                     });
 
                 // Discard indices that are not on the boundary of the lines
@@ -89,20 +107,44 @@ namespace module::vision {
                 }
 
                 // ** FIT LINES TO CLUSTERS **
+                auto field_lines       = std::make_unique<FieldLines>();
+                field_lines->id        = horizon.id;
+                field_lines->timestamp = horizon.timestamp;
+                field_lines->Hcw       = horizon.Hcw;
 
                 // Loop for each cluster - there may be clusters added if Ts or Ls are split
                 while (!clusters.empty()) {
                     // Grab a cluster and delete it
-                    cluster = clusters.back();
+                    auto cluster = clusters.back();
                     clusters.pop_back();
+
+                    // The rays from the mesh are unit vectors from the camera directed towards
+                    // a point. If these vectors are multiplied by some number,
+                    // they will give the point on the field
+                    // It is known that field lines are on the ground, therefore the z coordinate
+                    // will be equal to the distance of the camera to the ground, which can be
+                    // obtained with Hcw.
+
+                    // Get the distance from the camera to the ground
+                    float rWCw_z = horizon.Hcw.coeff(2, 3);
+                    Eigen::Affine3f Hcw(horizon.Hcw.cast<float>());
 
                     // Grab all of the data points for this cluster in a vector
                     std::vector<Eigen::Vector2f> data_points;
                     for (const auto& idx : cluster) {
-                        Eigen::Vector3f ray = horizon->mesh.Hcw * rays.col(idx);
+                        // Get the unit vector and multiply it to get the point on the field
+                        // uPCw
+                        Eigen::Vector3f ray = rays.col(idx);
+                        // rPCw
+                        ray *= rWCw_z / ray.z();
+                        // rPCc
+                        ray = Hcw.linear() * ray;
+                        // rPWw
+                        ray = Hcw.inverse() * ray;
+
                         data_points.push_back(Eigen::Vector2f(ray.x(), ray.y()));
                     }
-                    auto result = utility::vision::linreg(data_points);
+                    auto result = utility::vision::linreg<float>(data_points);
 
                     // Returned false, ie it broke...
                     if (!result.first) {
@@ -115,12 +157,25 @@ namespace module::vision {
                     float coefficient                       = 0.0;
                     std::tie(slope, intercept, coefficient) = result.second;
 
+
                     // If coefficient is close enough to 1, then make a line out of it
+                    if (coefficient > 0.8) {
+                        Line line;
+                        line.lineEndPointA = Eigen::Vector3f(1, slope + intercept, 0);
+                        line.lineEndPointB = Eigen::Vector3f(-1, -slope + intercept, 0);
+                        line.b             = intercept;
+                        line.m             = slope;
+                        line.r             = coefficient;
+                        field_lines->lines.push_back(std::move(line));
+                    }
+
                     // If not, try for a circle
                     // If not a circle, try splitting it. Add the split to the clusters to be dealt with in another loop
                 }
 
                 // Emit a goals message to see the lines in nusight :D
+                log<NUClear::DEBUG>(fmt::format("Found {} lines", field_lines->lines.size()));
+                emit(std::move(field_lines));
             });
     }
 
