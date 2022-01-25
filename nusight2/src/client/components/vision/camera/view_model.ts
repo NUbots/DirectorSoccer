@@ -1,19 +1,18 @@
 import { computed } from 'mobx'
-
-import { scene } from '../../three/builders'
-import { stage } from '../../three/builders'
-import { orthographicCamera } from '../../three/builders'
+import { orthographicCamera, scene, stage } from '../../three/builders'
 import { Canvas } from '../../three/three'
 import { ImageViewModel } from '../image_view/view_model'
-
 import { BallsViewModel } from './balls'
 import { CompassViewModel } from './compass'
 import { DistanceViewModel } from './distance'
+import { FieldLinesViewModel } from './fieldlines'
 import { GoalsViewModel } from './goals'
 import { GreenHorizonViewModel } from './greenhorizon'
 import { HorizonViewModel } from './horizon'
 import { CameraModel } from './model'
 import { VisualMeshViewModel } from './visual_mesh'
+
+
 
 export class CameraViewModel {
   constructor(private readonly canvas: Canvas, private readonly model: CameraModel) {}
@@ -45,6 +44,7 @@ export class CameraViewModel {
         drawOptions.drawGreenhorizon && this.greenhorizon?.greenhorizon(),
         drawOptions.drawBalls && this.balls?.balls(),
         drawOptions.drawGoals && this.goals?.goals(),
+        drawOptions.drawFieldLines && this.fieldlines?.fieldlines(),
       ],
     }
   })
@@ -78,6 +78,11 @@ export class CameraViewModel {
   @computed
   private get goals(): GoalsViewModel | undefined {
     return this.model.goals && GoalsViewModel.of(this.model.goals, this.canvas, this.model.params)
+  }
+
+  @computed
+  private get fieldlines(): FieldLinesViewModel | undefined {
+    return this.model.fieldlines && FieldLinesViewModel.of(this.model.fieldlines, this.canvas, this.model.params)
   }
 
   @computed

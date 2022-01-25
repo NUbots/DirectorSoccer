@@ -1,16 +1,15 @@
 import { createTransformer } from 'mobx-utils'
 import * as THREE from 'three'
-
 import { UnreachableError } from '../../../../shared/base/unreachable_error'
 import { FieldDimensions } from '../../../../shared/field/dimensions'
 import { Vector3 } from '../../../math/vector3'
 import { Vector4 } from '../../../math/vector4'
 import { group } from '../../three/builders'
 import { Canvas } from '../../three/three'
-import { CameraParams } from '../camera/model'
-import { Goal } from '../camera/model'
-
+import { CameraParams, Goal } from '../camera/model'
 import { LineProjection } from './line_projection'
+
+
 
 export class GoalsViewModel {
   private readonly model: Goal[]

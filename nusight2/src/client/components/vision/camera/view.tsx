@@ -1,18 +1,13 @@
-import { action } from 'mobx'
-import { computed } from 'mobx'
+import { action, computed } from 'mobx'
 import { observer } from 'mobx-react'
-import React from 'react'
-import { Component } from 'react'
-
-import { SwitchesMenuOption } from '../../switches_menu/view'
-import { SwitchesMenu } from '../../switches_menu/view'
-import { ObjectFit } from '../../three/three'
-import { Canvas } from '../../three/three'
-import { Three } from '../../three/three'
-
+import React, { Component } from 'react'
+import { SwitchesMenu, SwitchesMenuOption } from '../../switches_menu/view'
+import { Canvas, ObjectFit, Three } from '../../three/three'
 import { CameraModel } from './model'
 import styles from './styles.css'
 import { CameraViewModel } from './view_model'
+
+
 
 export type CameraViewProps = {
   model: CameraModel
@@ -74,6 +69,11 @@ export class CameraView extends Component<CameraViewProps> {
         label: 'Goals',
         enabled: drawOptions.drawGoals,
         toggle: action(() => (drawOptions.drawGoals = !drawOptions.drawGoals)),
+      },
+      {
+        label: 'FieldLines',
+        enabled: drawOptions.drawFieldLines,
+        toggle: action(() => (drawOptions.drawFieldLines = !drawOptions.drawFieldLines)),
       },
     ]
   }

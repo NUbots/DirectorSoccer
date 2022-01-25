@@ -1,10 +1,10 @@
 import { observable } from 'mobx'
-
 import { Matrix4 } from '../../../math/matrix4'
 import { Vector2 } from '../../../math/vector2'
 import { Vector3 } from '../../../math/vector3'
 import { Vector4 } from '../../../math/vector4'
 import { Image } from '../image'
+
 
 type DrawOptions = {
   drawImage: boolean
@@ -15,6 +15,7 @@ type DrawOptions = {
   drawGreenhorizon: boolean
   drawBalls: boolean
   drawGoals: boolean
+  drawFieldLines: boolean
 }
 
 export class CameraModel {
@@ -27,6 +28,7 @@ export class CameraModel {
   @observable.ref greenhorizon?: GreenHorizon
   @observable.ref balls?: Ball[]
   @observable.ref goals?: Goal[]
+  @observable.ref fieldlines?: FieldLine[]
 
   @observable.shallow drawOptions: DrawOptions
 
@@ -39,6 +41,7 @@ export class CameraModel {
     greenhorizon,
     balls,
     goals,
+    fieldlines,
     drawOptions,
   }: {
     id: number
@@ -49,6 +52,7 @@ export class CameraModel {
     greenhorizon?: GreenHorizon
     balls?: Ball[]
     goals?: Goal[]
+    fieldlines?: FieldLine[]
     drawOptions: DrawOptions
   }) {
     this.id = id
@@ -59,6 +63,7 @@ export class CameraModel {
     this.greenhorizon = greenhorizon
     this.balls = balls
     this.goals = goals
+    this.fieldlines = fieldlines
     this.drawOptions = drawOptions
   }
 
@@ -71,6 +76,7 @@ export class CameraModel {
     greenhorizon?: GreenHorizon
     balls?: Ball[]
     goals?: Goal[]
+    fieldlines?: FieldLine[]
   }) {
     return new CameraModel({
       drawOptions: {
@@ -82,6 +88,7 @@ export class CameraModel {
         drawGreenhorizon: true,
         drawBalls: true,
         drawGoals: true,
+        drawFieldLines: true,
       },
       ...opts,
     })
@@ -97,6 +104,7 @@ export class CameraModel {
       (that.greenhorizon && this.greenhorizon?.copy(that.greenhorizon)) || that.greenhorizon
     this.balls = that.balls
     this.goals = that.goals
+    this.fieldlines = that.fieldlines
     return this
   }
 }
@@ -198,6 +206,16 @@ export interface Goal {
     readonly bottom: Vector3
     readonly distance: number
   }
+}
+
+export interface FieldLine {
+  readonly timestamp: number
+  readonly Hcw: Matrix4
+  readonly lineEndPointA: Vector3
+  readonly lineEndPointB: Vector3
+  readonly b: number
+  readonly m: number
+  readonly r: number
 }
 
 export interface Cone {

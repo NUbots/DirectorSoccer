@@ -21,6 +21,7 @@ export class VisionNetwork {
     this.network.on(message.vision.VisualMesh, this.onMesh)
     this.network.on(message.vision.Balls, this.onBalls)
     this.network.on(message.vision.Goals, this.onGoals)
+    this.network.on(message.vision.FieldLines, this.onFieldLines)
     this.network.on(message.vision.GreenHorizon, this.onGreenHorizon)
   }
 
@@ -127,6 +128,25 @@ export class VisionNetwork {
         bottom: Vector3.from(goal.post?.bottom),
         distance: goal.post?.distance!,
       },
+    }))
+  }
+
+  @action
+  private onFieldLines(robotModel: RobotModel, packet: message.vision.FieldLines) {
+    const robot = VisionRobotModel.of(robotModel)
+    const { id, timestamp, Hcw, lines } = packet
+    const camera = robot.cameras.get(id)
+    if (!camera) {
+      return
+    }
+    camera.fieldlines = lines.map(fieldline => ({
+      timestamp: toSeconds(timestamp),
+      Hcw: Matrix4.from(Hcw),
+      lineEndPointA: Vector3.from(fieldline.lineEndPointA),
+      lineEndPointB: Vector3.from(fieldline.lineEndPointB),
+      b: fieldline.b!,
+      m: fieldline.m!,
+      r: fieldline.r!,
     }))
   }
 
