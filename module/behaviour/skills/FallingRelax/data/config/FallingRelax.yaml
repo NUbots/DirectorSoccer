@@ -1,6 +1,11 @@
-{
-	"FALLING_ANGLE" : 0.8,
-	"FALLING_ACCELERATION" : 8,
-	"RECOVERY_ACCELERATION" : [9.5, 10.5],
-	"PRIORITY" : 90
-}
+log_level: DEBUG
+
+# Priority in subsumption system when a falling relax is requested
+falling_relax_priority: 5
+
+# Angle between robot and world z axis that is required to execute falling relax
+falling_angle: 0.8
+# Magnitude of the robot accelerometer that is required to execute falling relax
+falling_acceleration: 8
+# Range the robot accelerometers magnitude can be in that is required to disable falling relax
+recovery_acceleration: [9.5, 10.5]

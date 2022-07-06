@@ -26,10 +26,12 @@
 
 #include "message/behaviour/ServoCommand.hpp"
 #include "message/input/Sensors.hpp"
+#include "message/support/nusight/DataPoint.hpp"
 
 #include "utility/behaviour/Action.hpp"
 #include "utility/input/LimbID.hpp"
 #include "utility/input/ServoID.hpp"
+#include "utility/nusight/NUhelpers.hpp"
 
 namespace module::behaviour::skills {
 
@@ -44,31 +46,40 @@ namespace module::behaviour::skills {
 
     using utility::behaviour::ActionPriorities;
     using utility::behaviour::RegisterAction;
+
     using utility::input::LimbID;
     using utility::input::ServoID;
+    using utility::nusight::graph;
 
-    FallingRelax::FallingRelax(std::unique_ptr<NUClear::Environment> environment) : Reactor(std::move(environment)) {
+    FallingRelax::FallingRelax(std::unique_ptr<NUClear::Environment> environment)
+        : Reactor(std::move(environment)), subsumption_id(size_t(this) * size_t(this) - size_t(this)) {
 
         // do a little configurating
         on<Configuration>("FallingRelax.yaml").then([this](const Configuration& config) {
-            // Store falling angle as a cosine so we can compare it directly to the z axis value
-            const auto fallingAngle = config["FALLING_ANGLE"].as<float>();
-            FALLING_ANGLE           = std::cos(fallingAngle);
+            log_level = config["log_level"].as<NUClear::LogLevel>();
 
-            // When falling the acceleration should drop below this value
-            FALLING_ACCELERATION = config["FALLING_ACCELERATION"].as<float>();
+            cfg.falling_angle        = config["falling_angle"].as<float>();
+            cfg.falling_acceleration = config["falling_acceleration"].as<float>();
 
             // Once the acceleration has stabalized, we are no longer falling
-            RECOVERY_ACCELERATION = config["RECOVERY_ACCELERATION"].as<std::vector<float>>();
+            cfg.recovery_acceleration = config["recovery_acceleration"].as<std::vector<float>>();
 
-            PRIORITY = config["PRIORITY"].as<float>();
+            cfg.falling_relax_priority = config["falling_relax_priority"].as<float>();
+            log<NUClear::DEBUG>("here");
         });
 
         on<Last<5, Trigger<Sensors>>, Single>([this](const std::list<std::shared_ptr<const Sensors>>& sensors) {
-            if (!falling && !sensors.empty() && fabs(sensors.back()->Htw(2, 2)) < FALLING_ANGLE) {
+            double magnitude;
+            // Transform to torso {t} from world {w} space
+            Eigen::Matrix4d Hwt = sensors.back()->Htw.inverse();
+            // Basis Z vector of torso {t} in world {w} space
+            Eigen::Vector3d uZTw = Hwt.block(0, 2, 3, 1);
+
+            log<NUClear::DEBUG>("here");
+            if (!falling && std::acos(Eigen::Vector3d::UnitZ().dot(uZTw)) > cfg.falling_angle) {
 
                 // We might be falling, check the accelerometer
-                double magnitude = 0;
+                magnitude = 0;
 
                 for (const auto& sensor : sensors) {
                     magnitude += sensor->accelerometer.norm();
@@ -76,14 +87,15 @@ namespace module::behaviour::skills {
 
                 magnitude /= sensors.size();
 
-                if (magnitude < FALLING_ACCELERATION) {
+                if (magnitude < cfg.falling_acceleration) {
+                    log<NUClear::DEBUG>("Fallen");
                     falling = true;
-                    updatePriority(PRIORITY);
+                    update_priority(cfg.falling_relax_priority);
                 }
             }
             else if (falling) {
                 // We might be recovered, check the accelerometer
-                double magnitude = 0;
+                magnitude = 0;
 
                 for (const auto& sensor : sensors) {
                     magnitude += sensor->accelerometer.norm();
@@ -92,22 +104,30 @@ namespace module::behaviour::skills {
                 magnitude /= sensors.size();
 
                 // See if we recover
-                if (magnitude > RECOVERY_ACCELERATION[0] && magnitude < RECOVERY_ACCELERATION[1]) {
+                if (magnitude > cfg.recovery_acceleration[0] && magnitude < cfg.recovery_acceleration[1]) {
                     falling = false;
-                    updatePriority(0);
+                    update_priority(0);
                 }
             }
+
+            // Emit graph of fallen state
+
+            emit(graph("FallingRelax angle", fabs(sensors.back()->Htw(2, 2))));
+            emit(graph("FallingRelax trigger angle", cfg.falling_angle));
+            emit(graph("magnitude", magnitude));
+            emit(graph("falling", falling));
         });
 
-        on<Trigger<Falling>>().then([this] { emit(std::make_unique<ExecuteScriptByName>(id, "Relax.yaml")); });
+        on<Trigger<Falling>>().then(
+            [this] { emit(std::make_unique<ExecuteScriptByName>(subsumption_id, "Relax.yaml")); });
 
         on<Trigger<KillFalling>>().then([this] {
             falling = false;
-            updatePriority(0);
+            update_priority(0);
         });
 
         emit<Scope::INITIALIZE>(std::make_unique<RegisterAction>(RegisterAction{
-            id,
+            subsumption_id,
             "Falling Relax",
             {std::pair<float, std::set<LimbID>>(
                 0.0f,
@@ -119,8 +139,8 @@ namespace module::behaviour::skills {
             }}));
     }
 
-    void FallingRelax::updatePriority(const float& priority) {
-        emit(std::make_unique<ActionPriorities>(ActionPriorities{id, {priority}}));
+    void FallingRelax::update_priority(const float& priority) {
+        emit(std::make_unique<ActionPriorities>(ActionPriorities{subsumption_id, {priority}}));
     }
 
 }  // namespace module::behaviour::skills
