@@ -10,7 +10,7 @@ falling_angle: 0.6
 fallen_angle: 1.2
 
 # Magnitude of the robot accelerometer that is required to execute falling relax
-falling_acceleration: 8
+falling_acceleration: 8.81
 
 # Range the robot accelerometers magnitude can be in that is required to disable falling relax
 recovery_acceleration: [9.5, 10.5]
