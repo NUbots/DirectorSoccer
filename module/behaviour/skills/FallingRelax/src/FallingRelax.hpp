@@ -39,18 +39,22 @@ namespace module::behaviour::skills {
             Config() = default;
             /// @brief Value that priority is set to when getup is requested
             float falling_relax_priority = 0.0f;
-            /// @brief Threshold angle for executing falling relax, between torso z axis and world z axis
+            /// @brief Executing falling relax: threshold angle between torso z axis and world z axis to trigger falling
+            /// relax
             float falling_angle = 0.0f;
-            /// @brief Threshold acceleration magnitude for executing falling relax
+            /// @brief Executing falling relax: Threshold acceleration magnitude to trigger falling relax
             float falling_acceleration = 0.0f;
-
+            /// @brief Recovery: Angle required to disable falling relax
+            float recovery_angle = 0.0f;
+            /// @brief Recovery: Threshold range acceleration magnitude needs to be in to disable falling relax
             std::vector<float> recovery_acceleration{};
         } cfg;
 
-        /// @brief
+        /// @brief Bool to indicate if the robot is currently falling and hasn't recovered yet
         bool falling = false;
 
-        /// @brief
+        /// @brief Updates the priority of the module by emitting an ActionPriorities message
+        /// @param priority The priority used in the ActionPriorities message
         void update_priority(const float& priority);
 
     public:

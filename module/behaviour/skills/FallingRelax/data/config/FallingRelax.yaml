@@ -4,8 +4,16 @@ log_level: DEBUG
 falling_relax_priority: 5
 
 # Angle between robot and world z axis that is required to execute falling relax
-falling_angle: 0.8
+falling_angle: 0.6
+
+# Angle between robot and world z axis that is required to execute falling relax
+fallen_angle: 1.2
+
 # Magnitude of the robot accelerometer that is required to execute falling relax
 falling_acceleration: 8
+
 # Range the robot accelerometers magnitude can be in that is required to disable falling relax
 recovery_acceleration: [9.5, 10.5]
+
+# Angle the robot needs to be at to disable falling relax
+recovery_angle: 0.5

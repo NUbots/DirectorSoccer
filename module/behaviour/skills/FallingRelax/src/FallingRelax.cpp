@@ -63,66 +63,85 @@ namespace module::behaviour::skills {
 
             // Once the acceleration has stabalized, we are no longer falling
             cfg.recovery_acceleration = config["recovery_acceleration"].as<std::vector<float>>();
+            cfg.recovery_angle        = config["recovery_angle"].as<float>();
 
             cfg.falling_relax_priority = config["falling_relax_priority"].as<float>();
             log<NUClear::DEBUG>("here");
         });
 
-        on<Last<5, Trigger<Sensors>>, Single>([this](const std::list<std::shared_ptr<const Sensors>>& sensors) {
-            double magnitude;
-            // Transform to torso {t} from world {w} space
-            Eigen::Matrix4d Hwt = sensors.back()->Htw.inverse();
-            // Basis Z vector of torso {t} in world {w} space
-            Eigen::Vector3d uZTw = Hwt.block(0, 2, 3, 1);
+        on<Last<5, Trigger<Sensors>>, Single>().then(
+            "Falling Relax Check",
+            [this](const std::list<std::shared_ptr<const Sensors>>& sensors) {
+                // Transform to torso {t} from world {w} space
+                Eigen::Matrix4d Hwt = sensors.back()->Htw.inverse();
+                // Basis Z vector of torso {t} in world {w} space
+                Eigen::Vector3d uZTw = Hwt.block(0, 2, 3, 1);
 
-            log<NUClear::DEBUG>("here");
-            if (!falling && std::acos(Eigen::Vector3d::UnitZ().dot(uZTw)) > cfg.falling_angle) {
-
-                // We might be falling, check the accelerometer
-                magnitude = 0;
-
+                // Calculate the magnitude of the accelerometer
+                double magnitude = 0;
                 for (const auto& sensor : sensors) {
                     magnitude += sensor->accelerometer.norm();
                 }
-
                 magnitude /= sensors.size();
+                double angle = std::acos(Eigen::Vector3d::UnitZ().dot(uZTw));
 
-                if (magnitude < cfg.falling_acceleration) {
-                    log<NUClear::DEBUG>("Fallen");
-                    falling = true;
-                    update_priority(cfg.falling_relax_priority);
+                if (!falling && angle > cfg.falling_angle) {
+                    // We might be falling, check the accelerometer
+                    if (magnitude < cfg.falling_acceleration) {
+                        log<NUClear::DEBUG>("Fallen");
+                        falling = true;
+                        update_priority(cfg.falling_relax_priority);
+                    }
                 }
-            }
-            else if (falling) {
-                // We might be recovered, check the accelerometer
-                magnitude = 0;
 
+
+                if (log_level <= NUClear::DEBUG) {
+                    log<NUClear::DEBUG>("magnitude: ", magnitude);
+                    emit(graph("FallingRelax angle", angle));
+                    emit(graph("FallingRelax magnitude trigger", cfg.falling_acceleration));
+                    emit(graph("Falling Relax trigger angle", cfg.falling_angle));
+                    emit(graph("magnitude", magnitude));
+                    emit(graph("magnitude recovery lower limit", cfg.recovery_acceleration[0]));
+                    emit(graph("magnitude recovery upper limit", cfg.recovery_acceleration[1]));
+                    emit(graph("falling", falling));
+                }
+            });
+
+        on<Last<200, Trigger<Sensors>>, Single>().then(
+            "Falling Recovery Check",
+            [this](const std::list<std::shared_ptr<const Sensors>>& sensors) {
+                // Transform to torso {t} from world {w} space
+                Eigen::Matrix4d Hwt = sensors.back()->Htw.inverse();
+                // Basis Z vector of torso {t} in world {w} space
+                Eigen::Vector3d uZTw = Hwt.block(0, 2, 3, 1);
+
+                // Calculate the magnitude of the accelerometer
+                double magnitude = 0;
                 for (const auto& sensor : sensors) {
                     magnitude += sensor->accelerometer.norm();
                 }
-
                 magnitude /= sensors.size();
 
-                // See if we recover
-                if (magnitude > cfg.recovery_acceleration[0] && magnitude < cfg.recovery_acceleration[1]) {
-                    falling = false;
-                    update_priority(0);
+                double angle = std::acos(Eigen::Vector3d::UnitZ().dot(uZTw));
+                if (falling && angle < cfg.recovery_angle) {
+                    // We might be recovered, check the accelerometer and see if we have recovered
+                    if (magnitude > cfg.recovery_acceleration[0] && magnitude < cfg.recovery_acceleration[1]) {
+                        log<NUClear::DEBUG>("Fallen recovered");
+                        falling = false;
+                        update_priority(0);
+                    }
                 }
-            }
 
-            // Emit graph of fallen state
-
-            emit(graph("FallingRelax angle", fabs(sensors.back()->Htw(2, 2))));
-            emit(graph("FallingRelax trigger angle", cfg.falling_angle));
-            emit(graph("magnitude", magnitude));
-            emit(graph("falling", falling));
-        });
+                emit(graph("FallingRelax recovery angle", angle));
+                emit(graph("FallingRelax recovery magnitude", magnitude));
+                emit(graph("FallingRelax recovery trigger angle", cfg.recovery_angle));
+            });
 
         on<Trigger<Falling>>().then(
             [this] { emit(std::make_unique<ExecuteScriptByName>(subsumption_id, "Relax.yaml")); });
 
         on<Trigger<KillFalling>>().then([this] {
-            falling = false;
+            // falling = false;
             update_priority(0);
         });
 
