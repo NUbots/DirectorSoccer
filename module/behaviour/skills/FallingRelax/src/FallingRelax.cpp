@@ -132,9 +132,13 @@ namespace module::behaviour::skills {
                     }
                 }
 
-                emit(graph("FallingRelax recovery angle", angle));
-                emit(graph("FallingRelax recovery magnitude", magnitude));
-                emit(graph("FallingRelax recovery trigger angle", cfg.recovery_angle));
+                if (log_level <= NUClear::DEBUG) {
+                    emit(graph("Falling Recovery: Recovery angle", angle));
+                    emit(graph("Falling Recovery: Recovery magnitude", magnitude));
+                    emit(graph("Falling Recovery: Recovery trigger angle", cfg.recovery_angle));
+                    emit(graph("Falling Recovery: Magnitude recovery lower limit", cfg.recovery_acceleration[0]));
+                    emit(graph("Falling Recovery: Magnitude recovery upper limit", cfg.recovery_acceleration[1]));
+                }
             });
 
         on<Trigger<Falling>>().then(

@@ -29,9 +29,11 @@
 #include "message/behaviour/ServoCommand.hpp"
 #include "message/input/Sensors.hpp"
 #include "message/motion/GetupCommand.hpp"
+#include "message/support/nusight/DataPoint.hpp"
 
 #include "utility/behaviour/Action.hpp"
 #include "utility/input/LimbID.hpp"
+#include "utility/nusight/NUhelpers.hpp"
 
 namespace module::behaviour::skills {
 
@@ -41,11 +43,14 @@ namespace module::behaviour::skills {
     using message::input::Sensors;
     using message::motion::ExecuteGetup;
     using message::motion::KillGetup;
+    using message::support::nusight::DataPoint;
 
     using utility::behaviour::ActionPriorities;
     using utility::behaviour::RegisterAction;
+    using utility::nusight::graph;
     using LimbID  = utility::input::LimbID;
     using ServoID = utility::input::ServoID;
+
 
     Getup::Getup(std::unique_ptr<NUClear::Environment> environment)
         : Reactor(std::move(environment)), subsumption_id(size_t(this) * size_t(this) - size_t(this)) {
@@ -80,6 +85,12 @@ namespace module::behaviour::skills {
                 // its front
                 is_front = (uXTw.z() <= 0);
                 update_priority(cfg.getup_priority);
+            }
+
+            if (log_level <= NUClear::LogLevel::DEBUG) {
+                emit(graph("Getup: Angle", std::acos(Eigen::Vector3d::UnitZ().dot(uZTw))));
+                emit(graph("Getup: Trigger angle", cfg.fallen_angle));
+                emit(graph("Getup: getting_up", getting_up));
             }
         });
 
