@@ -19,6 +19,8 @@
 
 #include "FallingRelax.hpp"
 
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <cmath>
 
 #include "extension/Configuration.hpp"
@@ -94,16 +96,13 @@ namespace module::behaviour::skills {
                     }
                 }
 
-
                 if (log_level <= NUClear::DEBUG) {
                     log<NUClear::DEBUG>("magnitude: ", magnitude);
-                    emit(graph("FallingRelax angle", angle));
-                    emit(graph("FallingRelax magnitude trigger", cfg.falling_acceleration));
-                    emit(graph("Falling Relax trigger angle", cfg.falling_angle));
-                    emit(graph("magnitude", magnitude));
-                    emit(graph("magnitude recovery lower limit", cfg.recovery_acceleration[0]));
-                    emit(graph("magnitude recovery upper limit", cfg.recovery_acceleration[1]));
-                    emit(graph("falling", falling));
+                    emit(graph("Falling Relax: Angle", angle));
+                    emit(graph("Falling Relax: Magnitude", magnitude));
+                    emit(graph("Falling Relax: Magnitude trigger", cfg.falling_acceleration));
+                    emit(graph("Falling Relax: Trigger angle", cfg.falling_angle));
+                    emit(graph("Falling Relax: falling", falling));
                 }
             });
 
