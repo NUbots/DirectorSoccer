@@ -1,19 +1,9 @@
-# NUbots Codebase
+# Director Soccer
 
-![Main Build](https://github.com/NUbots/NUbots/actions/workflows/nubots.yaml/badge.svg?branch=main)
+This repository is a snapshot of the NUbots system with the Director implemented within NUClear. 
 
-![NUsight2 Build](https://github.com/NUbots/NUbots/actions/workflows/nusight.yaml/badge.svg?branch=main)
+The Director extension for NUClear can be found at https://github.com/NUbots/DirectorSoccer/tree/main/module/extension/Director.
+This includes over 30 automated tests at https://github.com/NUbots/DirectorSoccer/tree/main/module/extension/Director/tests.
 
-![Image Build](https://github.com/NUbots/NUbots/actions/workflows/images.yaml/badge.svg?branch=main)
+A paper on the Director can be found at https://arxiv.org/abs/2309.09248
 
-NUbots is a team in the University of Newcastle's robotics research group focused on developing humanoid soccer-playing robots for the international RoboCup competition.
-The multidisciplinary team of students and academics develops both hardware and software for the robots.
-
-This codebase is the current state of our development efforts to compete in the competition as well as active research projects within the laboratory.
-
-# NUbots Documentation and Handbook
-
-[NUbook](https://nubook.nubots.net/) is the handbook and high-level documentation for the NUbots team.
-It contains guides for [getting started with development](https://nubook.nubots.net/guides/main/getting-started) and [information about the team](https://nubook.nubots.net/team/introduction).
-
-We also have generated documentation from the code available at [codedocs](https://codedocs.nubots.net/).
