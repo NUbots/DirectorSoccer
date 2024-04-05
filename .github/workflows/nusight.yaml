@@ -38,7 +38,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Check for NUsight Changes
         uses: dorny/paths-filter@v2
@@ -73,7 +73,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Get our yarn cache if it exists
       # See https://github.com/actions/cache/blob/master/examples.md#node---yarn
@@ -120,7 +120,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Get our yarn cache if it exists
       # See https://github.com/actions/cache/blob/master/examples.md#node---yarn
@@ -167,7 +167,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Get our yarn cache if it exists
       # See https://github.com/actions/cache/blob/master/examples.md#node---yarn
